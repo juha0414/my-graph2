@@ -43,7 +43,7 @@ except Exception as e:
 # 3. 데이터 전처리
 # ==================================================
 
-# 장르가 여러 개라면 첫 번째 장르만 사용
+# 여러 장르가 "|"로 연결되어 있다면 첫 번째 장르만 사용
 # 예: 액션|범죄|스릴러 → 액션
 df["genre"] = (
     df["genre"]
@@ -54,7 +54,7 @@ df["genre"] = (
     .str.strip()
 )
 
-# 총 관객을 숫자로 변환
+# 총 관객을 숫자형으로 변환
 df["total_audi"] = pd.to_numeric(
     df["total_audi"],
     errors="coerce"
@@ -63,14 +63,13 @@ df["total_audi"] = pd.to_numeric(
 
 # ==================================================
 # 4. 첫 번째 그래프
-#    장르별 영화 편수 도넛 그래프
+#    장르별 영화 편수 - 도넛 그래프
 # ==================================================
 
 st.divider()
 
 st.header("1️⃣ 장르별 영화 편수")
 
-# 장르별 영화 편수 계산
 genre_count = (
     df["genre"]
     .value_counts()
@@ -82,8 +81,6 @@ genre_count.columns = [
     "영화 편수"
 ]
 
-
-# 도넛 그래프
 fig1 = px.pie(
     genre_count,
     names="장르",
@@ -92,7 +89,6 @@ fig1 = px.pie(
     title="장르별 영화 편수"
 )
 
-# 마우스를 올렸을 때 표시되는 정보
 fig1.update_traces(
     textposition="inside",
     textinfo="percent",
@@ -115,7 +111,7 @@ st.plotly_chart(
 
 
 # ==================================================
-# 5. 첫 번째 그래프 해석 입력
+# 5. 첫 번째 그래프 - 직접 작성
 # ==================================================
 
 st.subheader("📌 이 그래프로 알 수 있는 것")
@@ -127,25 +123,23 @@ answer1 = st.text_area(
     key="answer1"
 )
 
+if answer1:
+    st.info(answer1)
+
 
 # ==================================================
 # 6. 두 번째 그래프
-#    장르 안에 영화를 넣은 트리맵
+#    장르별 영화와 총 관객 - 트리맵
 # ==================================================
 
 st.divider()
 
 st.header("2️⃣ 장르별 영화와 총 관객")
 
-# 트리맵에 사용할 데이터
 treemap_df = df.dropna(
     subset=["genre", "movieNm", "total_audi"]
 ).copy()
 
-# 트리맵 생성
-# 첫 번째 단계: 장르
-# 두 번째 단계: 영화명
-# 칸의 크기: 총 관객
 fig2 = px.treemap(
     treemap_df,
     path=["genre", "movieNm"],
@@ -153,7 +147,6 @@ fig2 = px.treemap(
     title="장르별 영화와 총 관객"
 )
 
-# 마우스를 올렸을 때 영화명과 총 관객 표시
 fig2.update_traces(
     hovertemplate=(
         "<b>%{label}</b><br>"
@@ -173,7 +166,7 @@ st.plotly_chart(
 
 
 # ==================================================
-# 7. 두 번째 그래프 해석 입력
+# 7. 두 번째 그래프 - 직접 작성
 # ==================================================
 
 st.subheader("📌 이 그래프로 알 수 있는 것")
@@ -185,12 +178,139 @@ answer2 = st.text_area(
     key="answer2"
 )
 
+if answer2:
+    st.info(answer2)
+
 
 # ==================================================
-# 8. 장르별 영화 편수 데이터
+# 8. 세 번째 그래프
+#    총 관객 히스토그램
+# ==================================================
+
+st.divider()
+
+st.header("3️⃣ 영화별 총 관객 분포")
+
+hist_df = df.dropna(
+    subset=["movieNm", "total_audi"]
+).copy()
+
+fig3 = px.histogram(
+    hist_df,
+    x="total_audi",
+    nbins=20,
+    title="영화별 총 관객 분포",
+    labels={
+        "total_audi": "총 관객 수",
+        "count": "영화 편수"
+    }
+)
+
+fig3.update_traces(
+    hovertemplate=(
+        "총 관객 구간: %{x}<br>"
+        "영화 편수: %{y}편"
+        "<extra></extra>"
+    )
+)
+
+fig3.update_layout(
+    height=550,
+    xaxis_title="총 관객 수",
+    yaxis_title="영화 편수"
+)
+
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
+
+
+# ==================================================
+# 9. 세 번째 그래프 - 자동 분석 문구
+# ==================================================
+
+st.subheader("📌 이 그래프로 알 수 있는 것")
+
+# 히스토그램의 구간 계산
+min_audi = hist_df["total_audi"].min()
+max_audi = hist_df["total_audi"].max()
+
+bins = 20
+
+if max_audi > min_audi:
+
+    bin_width = (max_audi - min_audi) / bins
+
+    hist_df["관객 구간"] = pd.cut(
+        hist_df["total_audi"],
+        bins=bins,
+        include_lowest=True
+    )
+
+    bin_counts = (
+        hist_df["관객 구간"]
+        .value_counts()
+        .sort_index()
+    )
+
+    # 영화가 가장 많이 몰린 구간
+    most_common_bin = bin_counts.idxmax()
+    most_common_count = bin_counts.max()
+
+    # 가장 관객이 많은 영화
+    max_movie_row = hist_df.loc[
+        hist_df["total_audi"].idxmax()
+    ]
+
+    max_movie_name = max_movie_row["movieNm"]
+    max_movie_audi = int(max_movie_row["total_audi"])
+
+    # 구간의 시작값과 끝값
+    bin_start = int(most_common_bin.left)
+    bin_end = int(most_common_bin.right)
+
+    st.write(
+        f"대부분의 영화는 총 관객 약 "
+        f"{bin_start:,}명~{bin_end:,}명 구간에 몰려 있으며, "
+        f"가장 관객이 많은 영화는 **{max_movie_name}**으로 "
+        f"총 관객은 **{max_movie_audi:,}명**이다."
+    )
+
+else:
+
+    max_movie_row = hist_df.loc[
+        hist_df["total_audi"].idxmax()
+    ]
+
+    max_movie_name = max_movie_row["movieNm"]
+    max_movie_audi = int(max_movie_row["total_audi"])
+
+    st.write(
+        f"총 관객 수가 모두 같은 데이터이며, "
+        f"가장 관객이 많은 영화는 **{max_movie_name}**으로 "
+        f"총 관객은 **{max_movie_audi:,}명**이다."
+    )
+
+
+# ==================================================
+# 10. 세 번째 그래프 - 직접 작성할 수 있는 칸
+# ==================================================
+
+st.text_area(
+    "이 그래프에 대해 추가로 알 수 있는 내용을 직접 작성하세요.",
+    placeholder="여기에 추가로 분석한 내용을 작성하세요.",
+    height=100,
+    key="answer3"
+)
+
+
+# ==================================================
+# 11. 장르별 영화 편수 데이터
 # ==================================================
 
 with st.expander("장르별 영화 편수 데이터 보기"):
+
     st.dataframe(
         genre_count,
         use_container_width=True,
