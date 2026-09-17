@@ -3,17 +3,22 @@ import pandas as pd
 import plotly.express as px
 
 
+# --------------------------------------------------
+# 1. 기본 설정
+# --------------------------------------------------
+
 st.set_page_config(
-    page_title="영화 데이터 그래프 도감 2 - 분포와 관계",
+    page_title="영화 데이터 그래프 도감 2",
     page_icon="🎬",
     layout="wide"
 )
 
-st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
+st.title("🎬 영화 데이터 그래프 도감 2")
+st.write("영화 데이터를 다양한 그래프로 살펴보고 데이터의 특징과 관계를 알아봅니다.")
 
 
 # --------------------------------------------------
-# 데이터 불러오기
+# 2. 데이터 불러오기
 # --------------------------------------------------
 
 DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
@@ -22,9 +27,10 @@ df = pd.read_csv(DATA_URL)
 
 
 # --------------------------------------------------
-# 데이터 전처리
+# 3. 데이터 전처리
 # --------------------------------------------------
 
+# 여러 장르가 있는 경우 첫 번째 장르만 사용
 df["genre"] = (
     df["genre"]
     .fillna("미상")
@@ -34,21 +40,24 @@ df["genre"] = (
     .str.strip()
 )
 
-df["first_scrn"] = pd.to_numeric(
-    df["first_scrn"],
-    errors="coerce"
-)
+# 숫자형 데이터 변환
+numeric_columns = [
+    "first_scrn",
+    "first_show",
+    "first_week_audi",
+    "total_audi",
+    "days_in_top10"
+]
 
-df["total_audi"] = pd.to_numeric(
-    df["total_audi"],
-    errors="coerce"
-)
+for col in numeric_columns:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
 
 
-# ==================================================
-# 1. 장르별 영화 편수 도넛
-# ==================================================
+# --------------------------------------------------
+# 1️⃣ 장르별 영화 편수 - 도넛 차트
+# --------------------------------------------------
 
+st.divider()
 st.header("1️⃣ 장르별 영화 편수")
 
 genre_count = (
@@ -95,12 +104,11 @@ if answer1:
     st.info(answer1)
 
 
-# ==================================================
-# 2. 장르별 영화와 총 관객 트리맵
-# ==================================================
+# --------------------------------------------------
+# 2️⃣ 장르별 영화와 총 관객 - 트리맵
+# --------------------------------------------------
 
 st.divider()
-
 st.header("2️⃣ 장르별 영화와 총 관객")
 
 treemap_df = df.dropna(
@@ -144,12 +152,11 @@ if answer2:
     st.info(answer2)
 
 
-# ==================================================
-# 3. 영화별 총 관객 분포 히스토그램
-# ==================================================
+# --------------------------------------------------
+# 3️⃣ 영화별 총 관객 분포 - 히스토그램
+# --------------------------------------------------
 
 st.divider()
-
 st.header("3️⃣ 영화별 총 관객 분포")
 
 hist_df = df.dropna(
@@ -251,12 +258,11 @@ if answer3:
     st.info(answer3)
 
 
-# ==================================================
-# 4. 개봉일 스크린수와 총 관객 산점도
-# ==================================================
+# --------------------------------------------------
+# 4️⃣ 개봉일 스크린수와 총 관객의 관계 - 산점도
+# --------------------------------------------------
 
 st.divider()
-
 st.header("4️⃣ 개봉일 스크린수와 총 관객의 관계")
 
 scatter_df = df.dropna(
@@ -317,7 +323,7 @@ st.write(
 
 answer4 = st.text_area(
     "이 그래프에 대해 추가로 알 수 있는 내용을 직접 작성하세요.",
-    placeholder="여기에 추가로 분석한 내용을 작성하세요.",
+    placeholder="예: 개봉일 스크린수가 많은 영화일수록 총 관객이 많은 경향이 보인다.",
     height=100,
     key="answer4"
 )
@@ -326,18 +332,15 @@ if answer4:
     st.info(answer4)
 
 
-# ==================================================
-# 5. 장르별 총 관객 박스플롯
-# ==================================================
+# --------------------------------------------------
+# 5️⃣ 장르별 총 관객 분포 - 박스플롯
+# --------------------------------------------------
 
 st.divider()
-
 st.header("5️⃣ 장르별 총 관객 분포")
 
-# 장르별 영화 편수 계산
 genre_counts = df["genre"].value_counts()
 
-# 영화가 10편 이상인 장르만 선택
 valid_genres = genre_counts[
     genre_counts >= 10
 ].index
@@ -352,8 +355,6 @@ box_df = df[
     ]
 ).copy()
 
-
-# 박스플롯
 fig5 = px.box(
     box_df,
     x="genre",
@@ -406,3 +407,88 @@ answer5 = st.text_area(
 
 if answer5:
     st.info(answer5)
+
+
+# --------------------------------------------------
+# 6️⃣ 개봉일 스크린수와 총 관객의 관계 - 버블 그래프
+# --------------------------------------------------
+
+st.divider()
+st.header("6️⃣ 개봉일 스크린수와 총 관객의 관계 - 버블 그래프")
+
+bubble_df = df.dropna(
+    subset=[
+        "movieNm",
+        "first_scrn",
+        "first_week_audi",
+        "total_audi",
+        "genre"
+    ]
+).copy()
+
+# 첫 주 관객수가 0 이하인 데이터 제거
+bubble_df = bubble_df[
+    bubble_df["first_week_audi"] > 0
+].copy()
+
+fig6 = px.scatter(
+    bubble_df,
+    x="first_scrn",
+    y="total_audi",
+    size="first_week_audi",
+    color="genre",
+    hover_name="movieNm",
+    size_max=60,
+    title="개봉일 스크린수·총 관객·첫 주 관객의 관계",
+    labels={
+        "first_scrn": "개봉일 스크린수",
+        "total_audi": "총 관객",
+        "first_week_audi": "개봉 첫 주 관객",
+        "genre": "장르"
+    }
+)
+
+fig6.update_traces(
+    marker=dict(
+        opacity=0.65
+    ),
+    hovertemplate=(
+        "<b>%{hovertext}</b><br>"
+        "개봉일 스크린수: %{x:,.0f}개<br>"
+        "총 관객: %{y:,.0f}명<br>"
+        "개봉 첫 주 관객: %{marker.size:,.0f}명"
+        "<extra></extra>"
+    )
+)
+
+fig6.update_layout(
+    height=700,
+    xaxis_title="개봉일 스크린수",
+    yaxis_title="총 관객"
+)
+
+st.plotly_chart(
+    fig6,
+    use_container_width=True
+)
+
+st.subheader("📌 이 그래프로 알 수 있는 것")
+
+st.write(
+    "이 버블 그래프는 4번 산점도에 "
+    "개봉 첫 주 관객 수라는 정보를 추가한 것이다. "
+    "가로축은 개봉일 스크린수, 세로축은 총 관객을 나타내며, "
+    "버블의 크기가 클수록 개봉 첫 주 관객이 많다는 뜻이다. "
+    "따라서 개봉 초반에 많은 관객을 확보한 영화가 "
+    "총 관객에서 어떤 위치에 나타나는지 함께 확인할 수 있다."
+)
+
+answer6 = st.text_area(
+    "이 그래프에 대해 추가로 알 수 있는 내용을 직접 작성하세요.",
+    placeholder="예: 개봉 첫 주 관객이 많은 영화일수록 총 관객도 많은 경향이 나타난다.",
+    height=100,
+    key="answer6"
+)
+
+if answer6:
+    st.info(answer6)
