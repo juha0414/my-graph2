@@ -492,3 +492,82 @@ answer6 = st.text_area(
 
 if answer6:
     st.info(answer6)
+
+
+# --------------------------------------------------
+# 7️⃣ 제작 국가 → 장르 - 선버스트 그래프
+# --------------------------------------------------
+
+st.divider()
+st.header("7️⃣ 제작 국가와 장르별 영화 편수")
+
+sunburst_df = df.dropna(
+    subset=["nation", "genre"]
+).copy()
+
+# 제작 국가와 장르의 빈 값 처리
+sunburst_df["nation"] = (
+    sunburst_df["nation"]
+    .astype(str)
+    .str.strip()
+    .replace("", "미상")
+)
+
+sunburst_df["genre"] = (
+    sunburst_df["genre"]
+    .astype(str)
+    .str.strip()
+    .replace("", "미상")
+)
+
+# 영화 편수 계산
+sunburst_count = (
+    sunburst_df
+    .groupby(["nation", "genre"])
+    .size()
+    .reset_index(name="영화 편수")
+)
+
+fig7 = px.sunburst(
+    sunburst_count,
+    path=["nation", "genre"],
+    values="영화 편수",
+    title="제작 국가 → 장르별 영화 편수"
+)
+
+fig7.update_traces(
+    hovertemplate=(
+        "<b>%{label}</b><br>"
+        "영화 편수: %{value}편"
+        "<extra></extra>"
+    )
+)
+
+fig7.update_layout(
+    height=750
+)
+
+st.plotly_chart(
+    fig7,
+    use_container_width=True
+)
+
+st.subheader("📌 이 그래프로 알 수 있는 것")
+
+st.write(
+    "선버스트 그래프의 안쪽은 제작 국가이고, "
+    "바깥쪽은 해당 국가의 장르를 나타낸다. "
+    "각 칸의 크기는 해당 국가와 장르에 속하는 영화 편수에 비례하므로, "
+    "어떤 국가에서 어떤 장르의 영화가 많이 만들어졌는지 "
+    "한눈에 확인할 수 있다."
+)
+
+answer7 = st.text_area(
+    "이 그래프에 대해 추가로 알 수 있는 내용을 직접 작성하세요.",
+    placeholder="예: 특정 제작 국가에서는 특정 장르의 영화가 많이 나타난다.",
+    height=100,
+    key="answer7"
+)
+
+if answer7:
+    st.info(answer7)
